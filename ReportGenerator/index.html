@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>漏洞报告生成</title>
+  <!-- import CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="report" v-cloak>
+    <el-container>
+      <el-header>
+        <div class="report-header">
+          <img src="./images/word.png" alt="word">
+          <span>渗透报告生成器</span>
+        </div>
+      </el-header>
+      <el-container>
+        <el-aside width="450px">
+          <!-- 左侧漏洞名称列表 -->
+          <div class="left-menu">
+            <p v-for="(item, index) in loopholeDetails"><a v-bind:href="'#loophole'+index">{{index + 1 + '、' + item.title}}</a></p>
+          </div>
+        </el-aside>
+        <el-container>
+          <el-main>
+            <!-- 基础信息 -->
+            <div class="report-item">
+              <div class="border-bottom"></div>
+              <div class="item-title">
+                <img src="./images/html.png" alt="html">
+                <span>基础信息</span>
+              </div>
+              <div class="item-container">
+                <el-form ref="basicForm" :label-position="'top'" :model="basicForm">
+                  <el-form-item label="报告标题">
+                    <el-input v-model="basicForm.title" placeholder="写XXXX系统、XXXX平台，不用加后面的渗透测试报告"></el-input>
+                  </el-form-item>
+                  <el-form-item label="测试范围">
+                    <el-input style="margin-bottom: 20px;" v-model="basicForm.testScope" placeholder="系统名称"></el-input>
+                    <el-input
+                      type="textarea"
+                      :rows="2"
+                      placeholder="网站URL"
+                      v-model="basicForm.webUrl">
+                    </el-input>
+                  </el-form-item>
+                  <el-form-item label="测试起止日期">
+                    <el-date-picker
+                      v-model="basicForm.testDate"
+                      type="daterange"
+                      range-separator="至"
+                      start-placeholder="开始日期"
+                      end-placeholder="结束日期">
+                    </el-date-picker>
+                  </el-form-item>
+                  <el-form-item label="渗透人员">
+                    <el-input v-model="basicForm.tester" placeholder="渗透人员"></el-input>
+                  </el-form-item>
+                  <el-form-item label="审核人员">
+                    <el-input v-model="basicForm.auditor" placeholder="审核人员"></el-input>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+            <!-- 漏洞详情 -->
+            <div v-if="loopholeDetails.length > 0" class="report-item">
+              <div class="border-bottom"></div>
+              <div class="item-title">
+                <img src="./images/bug.png" alt="html">
+                <span>漏洞详情</span>
+              </div>
+              <div class="loophole-item" v-for="(item, index) in loopholeDetails" v-bind:id="'loophole'+index">
+                <el-form  ref="item" :label-position="'top'" :model="item">
+                  <div class="loophole-item-header">
+                    <span >{{index + 1}}</span>
+                    <el-input v-model="item.title"></el-input>
+                  </div>
+                  <div class="loophole-item-container">
+                    <el-form-item label="漏洞URL">
+                      <el-input
+                        type="textarea"
+                        :rows="4"
+                        v-model="item.url">
+                      </el-input>
+                    </el-form-item>
+                    <el-form-item label="漏洞描述">
+                      <el-input
+                        type="textarea"
+                        :rows="4"
+                        v-model="item.description">
+                      </el-input>
+                    </el-form-item>
+                    <el-form-item label="修复方案">
+                      <el-input
+                        type="textarea"
+                        :rows="4"
+                        v-model="item.repairPlan">
+                      </el-input>
+                    </el-form-item>
+                    <el-form-item label="漏洞级别">
+                      <el-radio-group v-model="item.level">
+                        <el-radio :label="0">高</el-radio>
+                        <el-radio :label="1">中</el-radio>
+                        <el-radio :label="2">低</el-radio>
+                      </el-radio-group>
+                    </el-form-item>
+                  </div>
+                </el-form>
+                <el-button size="mini"
+                          class="delete-btn"
+                          type="info"
+                          icon="el-icon-close"
+                          @dblclick.native="deleteLoophole(index)">双击删除</el-button>
+              </div>
+            </div>
+            <!-- 添加漏洞 -->
+            <div class="report-item">
+              <div class="border-bottom"></div>
+              <div class="item-title">
+                <img src="./images/rocket.png" alt="html">
+                <span>添加漏洞</span>
+              </div>
+              <div>
+                <el-button v-for="item in loophole"
+                          size="mini"
+                          icon="el-icon-plus"
+                          v-on:click="addLoophole(item)">{{item.btnText}}</el-button>
+              </div>
+            </div>
+            <!-- 整体评价 -->
+            <div v-if="loopholeDetails.length > 0" class="report-item">
+              <div class="border-bottom"></div>
+              <div class="item-title">
+                <img src="./images/trophy.png" alt="html">
+                <span>整体评价</span>
+              </div>
+              <div class="item-container">
+                <div class="evalution-box">
+                  <div class="selected-evaluation-icon"
+                      v-bind:style="{ backgroundColor: evaluation.selected.color }"></div>
+                  <el-select style="width: 100%; text-align: center;" v-model="evaluation.selected" placeholder="请选择">
+                    <el-option
+                      v-for="item in evaluation.list"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item">
+                      <span v-bind:style="{ backgroundColor: item.color }" style="float: left; width: 20px; height: 20px; margin-top: 6px; border-radius: 50%;"></span>
+                      <span style="float: left; margin-left: 20px; color: #8492a6; font-size: 13px">{{ item.label }}</span>
+                    </el-option>
+                  </el-select>
+                </div>
+                
+                <el-form :label-position="'top'">
+                  <el-form-item label="整体安全建议">
+                    <el-input
+                      type="textarea"
+                      :rows="4"
+                      placeholder="可以留空，留空会有默认的整体安全建议。点击生成会等待2-20秒不等的时间来生成报告。"
+                      v-model="safeRecommandation">
+                    </el-input>
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+          </el-main>
+          <el-footer style="height: 100px;">
+            <el-button v-on:click="submit()" type="primary">生成</el-button>
+          </el-footer>
+        </el-container>
+      </el-container>
+    </el-container>
+  </div>
+</body>
+  <!-- import Vue before Element -->
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <!-- import JavaScript -->
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="./reportGenerator.js"></script>
+</html>
